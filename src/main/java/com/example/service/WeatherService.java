@@ -2,10 +2,8 @@ package com.example.service;
 
 import com.example.config.WeatherConfig;
 import com.example.exception.WeatherException;
-import com.example.model.WeatherData;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.example.model.CityWeather;
+import com.example.response.WeatherResponse;
 import jakarta.annotation.Nullable;
 import jakarta.inject.Singleton;
 import org.eclipse.microprofile.rest.client.inject.RestClient;
@@ -16,8 +14,6 @@ import java.util.logging.Logger;
 @Singleton
 public class WeatherService {
     private final Logger LOGGER = Logger.getLogger("com.example.service.WeatherService");
-    private static final String MAIN_NODE = "main";
-    private static final String TEMP_NODE = "temp";
     private final WeatherClient weatherClient;
     private final WeatherConfig weatherConfig;
 
@@ -27,10 +23,10 @@ public class WeatherService {
     }
 
     @Nullable
-    public WeatherData getWeather(double latitude, double longitude) {
+    public WeatherResponse getWeather(double latitude, double longitude) {
         try {
             LOGGER.log(Level.INFO, ("Called weatherService with lat: " + latitude + " lon: " + longitude));
-            final String weatherData = weatherClient.getWeather(latitude, longitude, weatherConfig.getApiKey());
+            final CityWeather weatherData = weatherClient.getWeather(latitude, longitude, weatherConfig.getApiKey());
             return parseAndTransformWeatherData(weatherData);
         } catch (Exception e) {
             LOGGER.log(Level.ERROR, "Error fetching weather data: " + e.getMessage());
@@ -39,20 +35,18 @@ public class WeatherService {
     }
 
     @Nullable
-    private WeatherData parseAndTransformWeatherData(String weatherData) {
-        final ObjectMapper objectMapper = new ObjectMapper();
+    private WeatherResponse parseAndTransformWeatherData(CityWeather cityWeather) {
         try {
-            final JsonNode jsonNode = objectMapper.readTree(weatherData);
-            final WeatherData transformedData = new WeatherData();
-            transformedData.setLocation(jsonNode.get("name").asText());
-            transformedData.setTemperature(jsonNode.get(MAIN_NODE).get(TEMP_NODE).asDouble());
-            transformedData.setWeatherDescription(jsonNode.get("weather").get(0).get("description").asText());
-            final double temperature = jsonNode.get(MAIN_NODE).get(TEMP_NODE).asDouble();
-            final double humidity = jsonNode.get(MAIN_NODE).get("humidity").asDouble();
+            final WeatherResponse transformedData = new WeatherResponse();
+            transformedData.setLocation(cityWeather.getName());
+            transformedData.setTemperature(cityWeather.getMain().getTemp());
+            transformedData.setWeatherDescription(cityWeather.getWeatherList().getFirst().getDescription());
+            final double temperature = cityWeather.getMain().getTemp();
+            final double humidity = cityWeather.getMain().getHumidity();
             final String additionalInfo = getAdditionalInfo(temperature, humidity);
             transformedData.setAdditionalInfo(additionalInfo);
             return transformedData;
-        } catch (JsonProcessingException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.ERROR, "Error fetching weather data: " + e.getMessage());
             return null;
         }

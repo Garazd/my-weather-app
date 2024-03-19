@@ -1,7 +1,7 @@
 package com.example.controller;
 
 import com.example.exception.WeatherException;
-import com.example.model.WeatherData;
+import com.example.response.WeatherResponse;
 import com.example.service.WeatherService;
 import io.quarkus.test.junit.QuarkusTest;
 import jakarta.ws.rs.WebApplicationException;
@@ -31,15 +31,15 @@ public class WeatherControllerTest {
 
     @Test
     public void shouldSuccessfullyReturnWeatherData() {
-        final WeatherData expectedWeatherData = new WeatherData();
-        expectedWeatherData.setLocation("San Francisco");
-        expectedWeatherData.setWeatherDescription("Sunny");
-        expectedWeatherData.setAdditionalInfo("Good weather for a walk.");
-        when(weatherService.getWeather(LATITUDE, LONGITUDE)).thenReturn(expectedWeatherData);
+        final WeatherResponse expectedWeatherResponse = new WeatherResponse();
+        expectedWeatherResponse.setLocation("San Francisco");
+        expectedWeatherResponse.setWeatherDescription("Sunny");
+        expectedWeatherResponse.setAdditionalInfo("Good weather for a walk.");
+        when(weatherService.getWeather(LATITUDE, LONGITUDE)).thenReturn(expectedWeatherResponse);
 
-        final WeatherData weatherData = weatherController.getWeatherData(LATITUDE_PARAM, LONGITUDE_PARAM);
+        final WeatherResponse weatherResponse = weatherController.getWeatherData(LATITUDE_PARAM, LONGITUDE_PARAM);
 
-        assertThat(expectedWeatherData).isEqualTo(weatherData);
+        assertThat(expectedWeatherResponse).isEqualTo(weatherResponse);
     }
 
     @Test

@@ -2,7 +2,10 @@ package com.example.service;
 
 import com.example.config.WeatherConfig;
 import com.example.exception.WeatherException;
-import com.example.model.WeatherData;
+import com.example.model.CityWeather;
+import com.example.model.Main;
+import com.example.model.Weather;
+import com.example.response.WeatherResponse;
 import com.example.util.LogCaptureHandler;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,10 +29,14 @@ public class WeatherServiceTest {
     private final Logger logger = Logger.getLogger("com.example.service.WeatherService");
     private final LogCaptureHandler logCaptureHandler = new LogCaptureHandler();
     private static final String ERROR_MESSAGE = "Error fetching weather data";
-
     private static final double LATITUDE = 37.7749;
     private static final double LONGITUDE = -122.4194;
     private static final String TEST_API_KEY = "testApiKey";
+    private static final CityWeather WEATHER = CityWeather.builder()
+            .name("San Francisco")
+            .weatherList(List.of(Weather.builder().description("Sunny").build()))
+            .main(Main.builder().temp(25.0).humidity(50).build())
+            .build();
 
     private WeatherService weatherService;
 
@@ -51,12 +58,9 @@ public class WeatherServiceTest {
 
     @Test
     public void shouldSuccessfullyReturnWeatherDataWithGoodWeather() {
-        final String mockWeatherData = "{\"name\": \"San Francisco\", \"main\": {\"temp\": 25.0, \"humidity\": 50}, " +
-                "\"weather\": [{\"description\": \"Sunny\"}]}";
+        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(WEATHER);
 
-        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(mockWeatherData);
-
-        final WeatherData weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
+        final WeatherResponse weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
 
         assertThat(Objects.requireNonNull(weatherData).getLocation()).isEqualTo("San Francisco");
         assertThat(weatherData.getTemperature()).isEqualTo(25.0);
@@ -66,12 +70,12 @@ public class WeatherServiceTest {
 
     @Test
     public void shouldSuccessfullyReturnWeatherDataWithBadWeather() {
-        final String mockWeatherData = "{\"name\": \"San Francisco\", \"main\": {\"temp\": 35.0, \"humidity\": 50}, " +
-                "\"weather\": [{\"description\": \"Sunny\"}]}";
+        final Main main = Main.builder().temp(35.0).build();
+        WEATHER.setMain(main);
 
-        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(mockWeatherData);
+        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(WEATHER);
 
-        final WeatherData weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
+        final WeatherResponse weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
 
         assertThat(Objects.requireNonNull(weatherData).getLocation()).isEqualTo("San Francisco");
         assertThat(weatherData.getTemperature()).isEqualTo(35.0);
@@ -81,12 +85,12 @@ public class WeatherServiceTest {
 
     @Test
     public void shouldSuccessfullyReturnWeatherDataWithSoSoWeather() {
-        final String mockWeatherData = "{\"name\": \"San Francisco\", \"main\": {\"temp\": 15.0, \"humidity\": 75}, " +
-                "\"weather\": [{\"description\": \"Sunny\"}]}";
+        final Main main = Main.builder().temp(15.0).humidity(75).build();
+        WEATHER.setMain(main);
 
-        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(mockWeatherData);
+        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(WEATHER);
 
-        final WeatherData weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
+        final WeatherResponse weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
 
         assertThat(Objects.requireNonNull(weatherData).getLocation()).isEqualTo("San Francisco");
         assertThat(weatherData.getTemperature()).isEqualTo(15.0);
@@ -104,26 +108,23 @@ public class WeatherServiceTest {
     }
 
     @Test
-    public void shouldThrowExceptionWhenWeatherClientReturnNullResponse() {
+    public void shouldReturnEmptyResponseWhenWeatherClientReturnNull() {
         when(weatherClient.getWeather(anyDouble(), anyDouble(), anyString())).thenReturn(null);
 
-        assertThatThrownBy(() -> weatherService.getWeather(LATITUDE, LONGITUDE))
-                .isInstanceOf(WeatherException.class)
-                .hasMessage(ERROR_MESSAGE);
+        final WeatherResponse weather = weatherService.getWeather(LATITUDE, LONGITUDE);
+        assertThat(weather).isNull();
     }
 
     @Test
     public void shouldReturnEmptyDataWhenWeatherClientReturnBrokenResponse() {
-        // Deleted { in line: "main": {"temp": 25.0
-        final String invalidWeatherData = "{\"name\": \"San Francisco\", \"main\": \"temp\": 25.0, \"humidity\": 50}, " +
-                "\"weather\": [{\"description\": \"Sunny\"}]}";
-        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(invalidWeatherData);
-        final List<String> logs = List.of("Called weatherService with lat: 37.7749 lon: -122.4194",
-                "Error fetching weather data: Unexpected character (':' (code 58)): " +
-                "was expecting comma to separate Object entries\n" +
-                " at [Source: REDACTED (`StreamReadFeature.INCLUDE_SOURCE_IN_LOCATION` disabled); line: 1, column: 42]");
+        WEATHER.setMain(null);
 
-        final WeatherData weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
+        when(weatherClient.getWeather(LATITUDE, LONGITUDE, TEST_API_KEY)).thenReturn(WEATHER);
+        final List<String> logs = List.of("Called weatherService with lat: 37.7749 lon: -122.4194",
+                "Error fetching weather data: Cannot invoke \"com.example.model.Main.getTemp()\" " +
+                        "because the return value of \"com.example.model.CityWeather.getMain()\" is null");
+
+        final WeatherResponse weatherData = weatherService.getWeather(LATITUDE, LONGITUDE);
         final List<String> capturedMessages = logCaptureHandler.getCapturedMessages();
 
         assertThat(weatherData).isNull();

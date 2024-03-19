@@ -1,6 +1,6 @@
 package com.example.controller;
 
-import com.example.model.WeatherData;
+import com.example.response.WeatherResponse;
 import com.example.service.WeatherService;
 import jakarta.inject.Singleton;
 import jakarta.ws.rs.GET;
@@ -27,7 +27,7 @@ public class WeatherController {
 
     @GET
     @Produces(MediaType.APPLICATION_JSON)
-    public WeatherData getWeatherData(@QueryParam("lat") String latitudeParam, @QueryParam("lon") String longitudeParam) {
+    public WeatherResponse getWeatherData(@QueryParam("lat") String latitudeParam, @QueryParam("lon") String longitudeParam) {
         final double latitude;
         final double longitude;
         try {
