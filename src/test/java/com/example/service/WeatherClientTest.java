@@ -1,29 +1,24 @@
 package com.example.service;
 
-import io.quarkus.test.common.http.TestHTTPEndpoint;
-import io.quarkus.test.common.http.TestHTTPResource;
 import io.quarkus.test.junit.QuarkusTest;
 import org.junit.jupiter.api.Test;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.nio.charset.StandardCharsets;
-
-import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static io.restassured.RestAssured.given;
+import static org.hamcrest.Matchers.emptyOrNullString;
+import static org.hamcrest.Matchers.not;
 
 @QuarkusTest
 public class WeatherClientTest {
 
-    @TestHTTPEndpoint(WeatherClient.class)
-    @TestHTTPResource
-    URL url;
-
     @Test
-    public void shouldSuccessfullyReturnResponse() throws IOException {
-        try (final InputStream in = url.openStream()) {
-            final String contents = new String(in.readAllBytes(), StandardCharsets.UTF_8);
-            assertThat(contents).isNotBlank();
-        }
+    public void shouldSuccessfullyReturnResponse() {
+        given()
+                .queryParam("lat", 37.7749)
+                .queryParam("lon", -122.4194)
+                .when()
+                .get("/weather")
+                .then()
+                .statusCode(200)
+                .body(not(emptyOrNullString()));
     }
 }
